@@ -32,10 +32,11 @@ int main(int argc, char** argv)
   G4double kinEnergy = 70; // MeV unit
   G4double rotationDeg = 30.;
 
-  auto bIsMac = std::system( "lsb_release" );
+  auto bIsMac = std::system( "lsb_release >> /dev/null" );
   G4int ranSeed = strtod(argv[1], NULL);
   long seed = time(0)*gethostid() * ranSeed;
-  if( !bIsMac ) CLHEP::HepRandom::setTheSeed( seed );
+  if( bIsMac ) seed = time(0) * ranSeed;
+  CLHEP::HepRandom::setTheSeed( seed );
 
   if(argc <= 1)
   {
