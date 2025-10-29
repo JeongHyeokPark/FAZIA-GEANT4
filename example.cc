@@ -32,12 +32,21 @@ int main(int argc, char** argv)
   G4double kinEnergy = 70; // MeV unit
   G4double rotationDeg = 30.;
 
+  auto bIsMac = std::system( "lsb_release" );
   G4int ranSeed = strtod(argv[1], NULL);
   long seed = time(0)*gethostid() * ranSeed;
-  CLHEP::HepRandom::setTheSeed( seed );
+  if( !bIsMac ) CLHEP::HepRandom::setTheSeed( seed );
+
+  if(argc <= 1)
+  {
+    cout << "PLEASE USE THE FOLLOWING COMMAND TO RUN THE EXECUTABLE" << endl;
+    cout << "./example N" << endl;
+    cout << "OR" << endl;
+    cout << "./example N run.mac" << endl;
+    return -1;
+  }
 
   G4String fileNumber = argv[1];
-
 
   G4RunManager* runManager = new G4RunManager;
   runManager -> SetUserInitialization( new DetectorConstruction( rotationDeg ) );
