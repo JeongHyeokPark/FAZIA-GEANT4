@@ -53,7 +53,8 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
   auto* physWorld  = new G4PVPlacement( nullptr, G4ThreeVector(0.,0.,0.), logicWorld, "phyWorld", nullptr, false, 0, true); // Copy number of 0 for World
 
   SetUpTarget();
-  SetUpCollimator();
+  SetUpBrass();
+  //SetUpCollimator();
   SetUpDetector();
 
 
@@ -76,6 +77,46 @@ void DetectorConstruction::SetUpTarget()
   auto* detVisAtt = new G4VisAttributes(G4Color(1.0, 1.0, 0.0, 0.5));
   detVisAtt->SetForceSolid(true);
   logicTarget->SetVisAttributes(detVisAtt);
+}
+
+void DetectorConstruction::SetUpBrass()
+{
+  // ========================= Target ========================
+  G4Element* elCu = new G4Element("Copper", "Cu", 29., 63.54 * g / mole);
+  G4Element* elZn = new G4Element("Zinc", "Zn", 30., 65.39 * g / mole);
+  G4Element* elMn = new G4Element("Manganse", "Mn", 25., 54.938 * g / mole);
+
+  G4double density = 8.87 * g / cm3;
+  G4Material* brass = new G4Material("brass", density, 3);
+  brass->AddElement(elCu, 70.0*perCent);
+  brass->AddElement(elZn, 28.8*perCent);
+  brass->AddElement(elMn, 1.2 *perCent);
+
+
+  // Assuming we have long (in X) Brass bar
+  G4double brass_x = 100*cm;
+  G4double brass_y = 5*cm;
+  G4double brass_z = 10*cm;
+
+  G4double hole_x = 1*cm;
+  G4double hole_y = 1*cm;
+  G4double hole_z = 1*cm;
+
+  auto* solidBrass = new G4Box("solidBrass", brass_x/2., brass_y/2., brass_z/2.);
+  auto* holeBrass = new G4Box("holeBrass", hole_x/2., hole_y/2., hole_z/2.);
+
+  // 0: No rotation
+  // What is the vector for?
+  G4SubtractionSolid* solidShape = new G4SubtractionSolid("outer-inner", solidBrass, holeBrass, 0, G4ThreeVector(0., 0., 0.));
+
+  // Assuming we are placing the brass 10 cm away from the target
+  // 15cm = 10cm (dist) + 5cm (half of brass_z)
+  auto* logicBrass = new G4LogicalVolume(solidBrass, brass, "logicBrass");
+  (void) new G4PVPlacement( nullptr, G4ThreeVector(0.,0.,15.*cm), logicBrass, "physBrass", logicWorld, false, 1, true); // Copy number of 1 for Brass
+
+  auto* detVisAtt = new G4VisAttributes(G4Color(1.0, 1.0, 0.0, 0.5));
+  detVisAtt->SetForceSolid(true);
+  logicBrass->SetVisAttributes(detVisAtt);
 }
 
 void DetectorConstruction::SetUpCollimator()
