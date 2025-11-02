@@ -14,7 +14,7 @@
 #include "G4UnionSolid.hh"
 #include "G4Box.hh"
 #include "G4Tubs.hh"
-
+#include "G4Sphere.hh"
 #include "G4Element.hh"
 #include "G4Material.hh"
 
@@ -53,7 +53,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
   auto* physWorld  = new G4PVPlacement( nullptr, G4ThreeVector(0.,0.,0.), logicWorld, "phyWorld", nullptr, false, 0, true); // Copy number of 0 for World
 
   SetUpTarget();
-  SetUpBrass();
+  SetUpDump();
   //SetUpCollimator();
   SetUpDetector();
 
@@ -79,9 +79,9 @@ void DetectorConstruction::SetUpTarget()
   logicTarget->SetVisAttributes(detVisAtt);
 }
 
-void DetectorConstruction::SetUpBrass()
+void DetectorConstruction::SetUpDump()
 {
-  // ========================= Target ========================
+  //===========Dump=====================================
   G4Element* elCu = new G4Element("Copper", "Cu", 29., 63.54 * g / mole);
   G4Element* elZn = new G4Element("Zinc", "Zn", 30., 65.39 * g / mole);
   G4Element* elMn = new G4Element("Manganse", "Mn", 25., 54.938 * g / mole);
@@ -92,32 +92,42 @@ void DetectorConstruction::SetUpBrass()
   brass->AddElement(elZn, 28.8*perCent);
   brass->AddElement(elMn, 1.2 *perCent);
 
+  G4VisAttributes* SetUpDumpVisAtt;
+  G4double outer_radius = 0.10*m;
+  G4double inner_radius = 0.06*m;
 
-  // Assuming we have long (in X) Brass bar
-  G4double brass_x = 100*cm;
-  G4double brass_y = 5*cm;
-  G4double brass_z = 10*cm;
+// 반구 생성
+  auto* solidDump = new G4Sphere("solidDump", inner_radius, outer_radius, 0.*deg, 360.*deg, 0.*deg, 90.*deg);
 
-  G4double hole_x = 1*cm;
-  G4double hole_y = 1*cm;
-  G4double hole_z = 1*cm;
+// Z축 방향 원기둥 구멍 생성
+  G4double hole_radius = 0.015*m;  // 외경 3cm = 반지름 1.5cm
+  G4double hole_height = (outer_radius - inner_radius)+1.*cm;
+  auto* solidHole = new G4Tubs("solidHole", 0., hole_radius, hole_height/2., 0.*deg, 360.*deg);
+// 반구에서 구멍을 뺌 (fRotDeg 각도만큼 theta 방향(y축 기준)으로 회전)
+// 회전 행렬: y축 기준으로 fRotDeg 회전 (theta 방향)
+  G4RotationMatrix* holeRot = new G4RotationMatrix();
+  holeRot->rotateY((-1.*fRotDeg)*deg);
 
-  auto* solidBrass = new G4Box("solidBrass", brass_x/2., brass_y/2., brass_z/2.);
-  auto* holeBrass = new G4Box("holeBrass", hole_x/2., hole_y/2., hole_z/2.);
+// 구멍의 위치: 반구 중심에서 fRotDeg 방향으로 7cm
+//  G4ThreeVector holePos(8.*std::sin(fRotDeg*deg)*std::cos(0.*deg)*cm, 8.*std::sin(fRotDeg*deg)*std::sin(0.*deg)*cm, 8.*std::cos(fRotDeg*deg)*cm);
+  G4double holeDis = (outer_radius + inner_radius)/2.;
+  G4ThreeVector holePos(holeDis*std::sin(fRotDeg*deg)*std::cos(0.*deg), holeDis*std::sin(fRotDeg*deg)*std::sin(0.*deg), holeDis*std::cos(fRotDeg*deg));
 
-  // 0: No rotation
-  // What is the vector for?
-  G4SubtractionSolid* solidShape = new G4SubtractionSolid("outer-inner", solidBrass, holeBrass, 0, G4ThreeVector(0., 0., 0.));
+  auto* solidDumpWithHole = new G4SubtractionSolid("solidDumpWithHole", solidDump, solidHole, holeRot, holePos);
 
-  // Assuming we are placing the brass 10 cm away from the target
-  // 15cm = 10cm (dist) + 5cm (half of brass_z)
-  auto* logicBrass = new G4LogicalVolume(solidBrass, brass, "logicBrass");
-  (void) new G4PVPlacement( nullptr, G4ThreeVector(0.,0.,15.*cm), logicBrass, "physBrass", logicWorld, false, 1, true); // Copy number of 1 for Brass
+  auto* logicDump = new G4LogicalVolume(solidDumpWithHole, brass, "logicDump");
+  (void) new G4PVPlacement( nullptr, G4ThreeVector(0.,0.,0.*cm), logicDump, "physDump", logicWorld, false, 99, true); // Copy number of 1 for Dump
 
   auto* detVisAtt = new G4VisAttributes(G4Color(1.0, 1.0, 0.0, 0.5));
-  detVisAtt->SetForceSolid(true);
-  logicBrass->SetVisAttributes(detVisAtt);
+  detVisAtt->SetForceSolid(false);
+
+  logicDump->SetVisAttributes(detVisAtt);
+  SetUpDumpVisAtt = new G4VisAttributes(G4Colour(0.5,0.4,0.7));
+  SetUpDumpVisAtt -> SetForceWireframe(true);
+  logicDump -> SetVisAttributes (SetUpDumpVisAtt);
+
 }
+
 
 void DetectorConstruction::SetUpCollimator()
 {
@@ -315,3 +325,5 @@ void DetectorConstruction::SetUpDetector()
   G4Transform3D trBlock(rotBlock, blockCenter);
   assemblyBlock->MakeImprint(logicWorld, trBlock, baseCopyNoBlock, checkOverlap);
 }
+
+

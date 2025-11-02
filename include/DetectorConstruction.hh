@@ -39,7 +39,7 @@ class DetectorConstruction : public G4VUserDetectorConstruction
     G4NistManager* nist = nullptr;
 
     void SetUpTarget();
-    void SetUpBrass();
+    void SetUpDump();
     void SetUpCollimator();
     void SetUpDetector();
     	
