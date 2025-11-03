@@ -30,7 +30,7 @@ int main(int argc, char** argv)
 {
   G4bool bSaveKinematics = 1; // 0: Don't save kinemaitcs, 1: Save
   G4double kinEnergy = 70; // MeV unit
-  G4double rotationDeg = 30.;
+  G4double rotationDeg = 60.;
 
   auto bIsMac = std::system( "lsb_release >> /dev/null" );
   G4int ranSeed = strtod(argv[1], NULL);
