@@ -26,12 +26,15 @@ void EventAction::BeginOfEventAction(const G4Event* evt)
   // 매 이벤트 시작 때 마다 gold target event를 initialize 해준다.
   isGoldTarget = false;
 
-  for( G4int i=0; i<16; i++ )
-  {
-    edepSi1[i] = 0;
-    edepSi2[i] = 0;
-    edepCsI[i] = 0;
-  }
+  for( G4int j=0; j<4; j++ )
+    for( G4int i=0; i<16; i++ )
+    {
+      edepSi1[j][i] = 0;
+      edepSi2[j][i] = 0;
+      edepCsI[j][i] = 0;
+    }
+
+  fTrackFlag.clear();
 }
 
 void EventAction::EndOfEventAction(const G4Event* evt)
@@ -44,22 +47,23 @@ void EventAction::EndOfEventAction(const G4Event* evt)
   G4int nFired = 0;
   for( G4int i=0; i<16; i++ )
   {
-    if( edepSi1[i] ) nFired++;
-    if( edepSi2[i] ) nFired++;
-    if( edepCsI[i] ) nFired++;
+    if( edepSi1[0][i] ) nFired++;
+    if( edepSi2[0][i] ) nFired++;
+    if( edepCsI[0][i] ) nFired++;
   }
   if( nFired==0 ) return;
 
 
   analysisManager->FillNtupleIColumn(1, 0, eventID);
+  for( G4int j=0; j<4; j++ )
   for( G4int i=0; i<16; i++ )
   {
-    int idxSi1 = 3*i + 1;
-    int idxSi2 = 3*i + 2;
-    int idxCsI = 3*i + 3;
-    analysisManager->FillNtupleDColumn(1, idxSi1, edepSi1[i]);
-    analysisManager->FillNtupleDColumn(1, idxSi2, edepSi2[i]);
-    analysisManager->FillNtupleDColumn(1, idxCsI, edepCsI[i]);
+    int idxSi1 = 16*j + 3*i + 1;
+    int idxSi2 = 16*j + 3*i + 2;
+    int idxCsI = 16*j + 3*i + 3;
+    analysisManager->FillNtupleDColumn(1, idxSi1, edepSi1[j][i]);
+    analysisManager->FillNtupleDColumn(1, idxSi2, edepSi2[j][i]);
+    analysisManager->FillNtupleDColumn(1, idxCsI, edepCsI[j][i]);
   }
   analysisManager->AddNtupleRow(1);
 }

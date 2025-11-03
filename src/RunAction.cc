@@ -49,12 +49,16 @@ void RunAction::BeginOfRunAction(const G4Run* )
   //Energy deposit정보 저장
   analysisManager->CreateNtuple("event_edep", "");
   analysisManager->CreateNtupleIColumn("eventID");
-  for( G4int i=0; i<16; i++ )
+  for( G4int j=0; j<4; j++ )
   {
-    G4String telNum = G4UIcommand::ConvertToString(i);
-    analysisManager->CreateNtupleDColumn("edep_Si1_"+telNum);
-    analysisManager->CreateNtupleDColumn("edep_Si2_"+telNum);
-    analysisManager->CreateNtupleDColumn("edep_CsI_"+telNum);
+    for( G4int i=0; i<16; i++ )
+    {
+      G4String telNum = G4UIcommand::ConvertToString(i);
+      G4String flagNum = G4UIcommand::ConvertToString(j);
+      analysisManager->CreateNtupleDColumn("edep_Si1_"+telNum+"_"+flagNum);
+      analysisManager->CreateNtupleDColumn("edep_Si2_"+telNum+"_"+flagNum);
+      analysisManager->CreateNtupleDColumn("edep_CsI_"+telNum+"_"+flagNum);
+    }
   }
   analysisManager->FinishNtuple(1);
 

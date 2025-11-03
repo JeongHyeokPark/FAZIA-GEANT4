@@ -34,10 +34,14 @@ void SteppingAction::UserSteppingAction(const G4Step* step)
   // Saving Data (기존 변수들 유지)
   G4int eventID = G4RunManager::GetRunManager() -> GetCurrentEvent() -> GetEventID();
   G4int parentID = step -> GetTrack() -> GetParentID();
+  G4int trackID = step -> GetTrack() -> GetTrackID();
   G4int pdg = step -> GetTrack() -> GetDefinition() -> GetPDGEncoding();
   G4double edep = step -> GetTotalEnergyDeposit();
 
   G4ThreeVector mom = step->GetTrack()->GetMomentum();
+
+  G4int trackFlag = 0;
+  if( eventAction->GetTrackFlag().size() ) trackFlag = eventAction->GetTrackFlag()[trackID];
 
 
 
@@ -54,15 +58,15 @@ void SteppingAction::UserSteppingAction(const G4Step* step)
       const G4Track* secondTrack = secondaryTracks->at(0);
       auto proc = secondTrack->GetCreatorProcess();
       G4String processName = proc->GetProcessName();
-      //G4cout << processName << G4endl;
-      //G4cout << numOfSecondary << G4endl;
+      G4double parentA = step->GetTrack()->GetDefinition()->GetAtomicMass();
+      G4double parentZ = step->GetTrack()->GetDefinition()->GetAtomicNumber();
 
 
-
+      // Elastic Scattering은 모두 hadElastic임
       if( processName=="hadElastic" )
       {
-        // proton의 에너지와 secondary의 저장
-        // 트랙이 하나만 생성 됐으니까, 지금 proton 과 생성된 secondary 하나만 저장
+        // X의 에너지와 secondary의 저장
+        // 트랙이 하나만 생성 됐으니까, 지금 X 과 생성된 secondary 하나만 저장
         G4ThreeVector protonMom = step->GetTrack()->GetMomentum();
         G4ThreeVector targetMom = secondTrack->GetMomentum();
 
@@ -76,36 +80,59 @@ void SteppingAction::UserSteppingAction(const G4Step* step)
 
         if( targetZ==79 && targetA==197 ) localGoldTarget = true;
 
-        if( fSaveKinematics && localGoldTarget )
+        bool localAirTarget = false;
+        if( targetZ==6 || 
+            targetZ==7 || 
+            targetZ==8 || 
+            targetZ==18 ) localAirTarget = true;
+
+        if( localGoldTarget || localAirTarget )
         {
-          analysisManager->FillNtupleIColumn( 0, eventID );
-          analysisManager->FillNtupleIColumn( 1, targetZ );
-          analysisManager->FillNtupleIColumn( 2, targetA );
-          analysisManager->FillNtupleIColumn( 3, 2212 );
-          analysisManager->FillNtupleDColumn( 4, protonMom.x() );
-          analysisManager->FillNtupleDColumn( 5, protonMom.y() );
-          analysisManager->FillNtupleDColumn( 6, protonMom.z() );
-          analysisManager->FillNtupleDColumn( 7, protonMass );
-          analysisManager->FillNtupleDColumn( 8, protonKe );
-          analysisManager->FillNtupleIColumn( 9, 0 );
-          analysisManager -> AddNtupleRow();
+          G4int secondTrackID = secondTrack->GetTrackID();
+
+          // 1: beam proton->Au
+          // 2: beam proton->Air
+          // 3: beam proton->Au->X->Air
+          if( localGoldTarget ) 
+            eventAction->GetTrackFlag().insert( std::pair<G4int,G4int> (secondTrackID,1) );
+          if( localAirTarget ) 
+          {
+            eventAction->GetTrackFlag().insert( std::pair<G4int,G4int> (secondTrackID,2) );
+            if( trackFlag==1 ) eventAction->GetTrackFlag().insert( std::pair<G4int,G4int> (secondTrackID,3) );
+          }
+
+          if( fSaveKinematics )
+          {
+            analysisManager->FillNtupleIColumn( 0, eventID );
+            analysisManager->FillNtupleIColumn( 1, targetZ );
+            analysisManager->FillNtupleIColumn( 2, targetA );
+            analysisManager->FillNtupleIColumn( 3, 2212 );
+            analysisManager->FillNtupleDColumn( 4, protonMom.x() );
+            analysisManager->FillNtupleDColumn( 5, protonMom.y() );
+            analysisManager->FillNtupleDColumn( 6, protonMom.z() );
+            analysisManager->FillNtupleDColumn( 7, protonMass );
+            analysisManager->FillNtupleDColumn( 8, protonKe );
+            analysisManager->FillNtupleIColumn( 9, 0 );
+            analysisManager -> AddNtupleRow();
 
 
-          analysisManager->FillNtupleIColumn( 0, eventID );
-          analysisManager->FillNtupleIColumn( 1, targetZ );
-          analysisManager->FillNtupleIColumn( 2, targetA );
-          analysisManager->FillNtupleIColumn( 3, secondTrack->GetDefinition()->GetPDGEncoding() );
-          analysisManager->FillNtupleDColumn( 4, targetMom.x() );
-          analysisManager->FillNtupleDColumn( 5, targetMom.y() );
-          analysisManager->FillNtupleDColumn( 6, targetMom.z() );
-          analysisManager->FillNtupleDColumn( 7, targetMass );
-          analysisManager->FillNtupleDColumn( 8, targetKe );
-          analysisManager->FillNtupleIColumn( 9, 0 );
-          analysisManager -> AddNtupleRow();
+            analysisManager->FillNtupleIColumn( 0, eventID );
+            analysisManager->FillNtupleIColumn( 1, targetZ );
+            analysisManager->FillNtupleIColumn( 2, targetA );
+            analysisManager->FillNtupleIColumn( 3, secondTrack->GetDefinition()->GetPDGEncoding() );
+            analysisManager->FillNtupleDColumn( 4, targetMom.x() );
+            analysisManager->FillNtupleDColumn( 5, targetMom.y() );
+            analysisManager->FillNtupleDColumn( 6, targetMom.z() );
+            analysisManager->FillNtupleDColumn( 7, targetMass );
+            analysisManager->FillNtupleDColumn( 8, targetKe );
+            analysisManager->FillNtupleIColumn( 9, 0 );
+            analysisManager -> AddNtupleRow();
+          }
         }
       }
 
-      if( processName=="protonInelastic" )
+      // protonInelastic 말고, 모든 Inelastic을 찾으면,
+      if( processName.contains("Inelastic") )
       {
         G4int targetZ = 0;
         G4int targetA = 0;
@@ -118,33 +145,56 @@ void SteppingAction::UserSteppingAction(const G4Step* step)
           targetZ += daughterZ;
           targetA += daughterA;
         }
-        targetZ--; // To compensate the proton number
-        targetA--; // To compensate the proton number
+        //targetZ--; // To compensate the proton number
+        //targetA--; // To compensate the proton number
+        targetZ -= parentZ; // To compensate the X number
+        targetA -= parentA; // To compensate the X number
 
         if( targetZ==79 && targetA==197 ) localGoldTarget = true;
 
-        if( fSaveKinematics && localGoldTarget )
+        bool localAirTarget = false;
+        if( targetZ==6 || 
+            targetZ==7 || 
+            targetZ==8 || 
+            targetZ==18 ) localAirTarget = true;
+
+        if( localGoldTarget || localAirTarget )
         {
           // secondary 나오는 트랙들의 정보 저장
           for( G4int i=0; i<numOfSecondary; i++ )
           {
             const G4Track* daughterTrack = secondaryTracks->at(i);
+            G4int daughterTrackID = daughterTrack->GetTrackID();
+
+            // 1: beam proton->Au
+            // 2: beam proton->Air
+            // 3: beam proton->Au->X->Air
+            if( localGoldTarget ) 
+              eventAction->GetTrackFlag().insert( std::pair<G4int,G4int> (daughterTrackID,1) );
+            if( localAirTarget ) 
+            {
+              eventAction->GetTrackFlag().insert( std::pair<G4int,G4int> (daughterTrackID,2) );
+              if( trackFlag==1 ) eventAction->GetTrackFlag().insert( std::pair<G4int,G4int> (daughterTrackID,3) );
+            }
+
             G4ThreeVector daughterMom = daughterTrack->GetMomentum();
             G4double daughterMass = daughterTrack->GetDefinition()->GetPDGMass();
             G4double ke = daughterTrack->GetKineticEnergy();
-            //G4int daughterPDG = daughterTrack ->GetDefinition()->GetPDGEncoding(); 
-            //G4cout << daughterPDG << G4endl;
-            analysisManager->FillNtupleIColumn( 0, eventID );
-            analysisManager->FillNtupleIColumn( 1, targetZ );
-            analysisManager->FillNtupleIColumn( 2, targetA );
-            analysisManager->FillNtupleIColumn( 3, daughterTrack->GetDefinition()->GetPDGEncoding() );
-            analysisManager->FillNtupleDColumn( 4, daughterMom.x() );
-            analysisManager->FillNtupleDColumn( 5, daughterMom.y() );
-            analysisManager->FillNtupleDColumn( 6, daughterMom.z() );
-            analysisManager->FillNtupleDColumn( 7, daughterMass );
-            analysisManager->FillNtupleDColumn( 8, ke );
-            analysisManager->FillNtupleIColumn( 9, 1 );
-            analysisManager -> AddNtupleRow();
+
+            if( fSaveKinematics )
+            {
+              analysisManager->FillNtupleIColumn( 0, eventID );
+              analysisManager->FillNtupleIColumn( 1, targetZ );
+              analysisManager->FillNtupleIColumn( 2, targetA );
+              analysisManager->FillNtupleIColumn( 3, daughterTrack->GetDefinition()->GetPDGEncoding() );
+              analysisManager->FillNtupleDColumn( 4, daughterMom.x() );
+              analysisManager->FillNtupleDColumn( 5, daughterMom.y() );
+              analysisManager->FillNtupleDColumn( 6, daughterMom.z() );
+              analysisManager->FillNtupleDColumn( 7, daughterMass );
+              analysisManager->FillNtupleDColumn( 8, ke );
+              analysisManager->FillNtupleIColumn( 9, 1 );
+              analysisManager -> AddNtupleRow();
+            }
           }
         }
       }
@@ -201,6 +251,16 @@ void SteppingAction::UserSteppingAction(const G4Step* step)
         eventAction->AccumulateEdepSi2( telNum, energy_deposit_step );
       else if (detNum == 7)// If the detector is CsI
         eventAction->AccumulateEdepCsI( telNum, energy_deposit_step );
+
+      if( trackFlag )
+      {
+        if (detNum == 3) // If the detector is epi
+          eventAction->AccumulateEdepSi1( trackFlag, telNum, energy_deposit_step );
+        else if (detNum == 6) // If the detector is int
+          eventAction->AccumulateEdepSi2( trackFlag, telNum, energy_deposit_step );
+        else if (detNum == 7)// If the detector is CsI
+          eventAction->AccumulateEdepCsI( trackFlag, telNum, energy_deposit_step );
+      }
     }
     // =================================================================
   }
