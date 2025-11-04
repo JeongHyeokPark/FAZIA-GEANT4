@@ -41,13 +41,18 @@ void SteppingAction::UserSteppingAction(const G4Step* step)
   G4ThreeVector mom = step->GetTrack()->GetMomentum();
 
   G4int trackFlag = 0;
-  if( eventAction->GetTrackFlag().size() ) trackFlag = eventAction->GetTrackFlag()[trackID];
+  if( eventAction->GetTrackFlag()->size() ) 
+  {
+    auto it = eventAction->GetTrackFlag()->find(trackID);
+    if (it != eventAction->GetTrackFlag()->end()) 
+      trackFlag = eventAction->GetTrackFlag()->at(trackID);
+  }
 
 
 
   // 가장 먼저 kinematics가 일어났는지, 확인한다
   // 내가 처음 쏴주는 양성자일때
-  if( parentID==0 && pdg==2212 )
+  //if( parentID==0 && pdg==2212 )
   {
     const std::vector< const G4Track* >* secondaryTracks = step->GetSecondaryInCurrentStep();
     int numOfSecondary = secondaryTracks->size();
@@ -88,17 +93,18 @@ void SteppingAction::UserSteppingAction(const G4Step* step)
 
         if( localGoldTarget || localAirTarget )
         {
-          G4int secondTrackID = secondTrack->GetTrackID();
+          //G4int secondTrackID = secondTrack->GetTrackID();
+          G4int secondTrackID = trackID + 1; // Temp implementation
 
           // 1: beam proton->Au
           // 2: beam proton->Air
           // 3: beam proton->Au->X->Air
           if( localGoldTarget ) 
-            eventAction->GetTrackFlag().insert( std::pair<G4int,G4int> (secondTrackID,1) );
+            eventAction->GetTrackFlag()->insert( std::pair<G4int,G4int> (secondTrackID,1) );
           if( localAirTarget ) 
           {
-            eventAction->GetTrackFlag().insert( std::pair<G4int,G4int> (secondTrackID,2) );
-            if( trackFlag==1 ) eventAction->GetTrackFlag().insert( std::pair<G4int,G4int> (secondTrackID,3) );
+            eventAction->GetTrackFlag()->insert( std::pair<G4int,G4int> (secondTrackID,2) );
+            if( trackFlag==1 ) eventAction->GetTrackFlag()->insert( std::pair<G4int,G4int> (secondTrackID,3) );
           }
 
           if( fSaveKinematics )
@@ -136,7 +142,8 @@ void SteppingAction::UserSteppingAction(const G4Step* step)
       {
         G4int targetZ = 0;
         G4int targetA = 0;
-        for( G4int i=0; i<numOfSecondary; i++ )
+        //for( G4int i=0; i<numOfSecondary; i++ )
+          for( G4int i=numOfSecondary-1; i>=0; i-- )
         {
           const G4Track* daughterTrack = secondaryTracks->at(i);
           G4double daughterA = daughterTrack->GetDefinition()->GetAtomicMass();
@@ -161,20 +168,22 @@ void SteppingAction::UserSteppingAction(const G4Step* step)
         if( localGoldTarget || localAirTarget )
         {
           // secondary 나오는 트랙들의 정보 저장
-          for( G4int i=0; i<numOfSecondary; i++ )
+          //for( G4int i=0; i<numOfSecondary; i++ )
+          for( G4int i=numOfSecondary-1; i>=0; i-- )
           {
             const G4Track* daughterTrack = secondaryTracks->at(i);
-            G4int daughterTrackID = daughterTrack->GetTrackID();
+            //G4int daughterTrackID = daughterTrack->GetTrackID();
+            G4int daughterTrackID = trackID + i + 1; // Temp Implementation
 
             // 1: beam proton->Au
             // 2: beam proton->Air
             // 3: beam proton->Au->X->Air
             if( localGoldTarget ) 
-              eventAction->GetTrackFlag().insert( std::pair<G4int,G4int> (daughterTrackID,1) );
+              eventAction->GetTrackFlag()->insert( std::pair<G4int,G4int> (daughterTrackID,1) );
             if( localAirTarget ) 
             {
-              eventAction->GetTrackFlag().insert( std::pair<G4int,G4int> (daughterTrackID,2) );
-              if( trackFlag==1 ) eventAction->GetTrackFlag().insert( std::pair<G4int,G4int> (daughterTrackID,3) );
+              eventAction->GetTrackFlag()->insert( std::pair<G4int,G4int> (daughterTrackID,2) );
+              if( trackFlag==1 ) eventAction->GetTrackFlag()->insert( std::pair<G4int,G4int> (daughterTrackID,3) );
             }
 
             G4ThreeVector daughterMom = daughterTrack->GetMomentum();

@@ -14,6 +14,7 @@ using namespace CLHEP;
 
 EventAction::EventAction()
 {
+  fTrackFlag = new std::map< G4int, G4int >;
 }
 
 EventAction::~EventAction()
@@ -34,7 +35,7 @@ void EventAction::BeginOfEventAction(const G4Event* evt)
       edepCsI[j][i] = 0;
     }
 
-  fTrackFlag.clear();
+  fTrackFlag->clear();
 }
 
 void EventAction::EndOfEventAction(const G4Event* evt)

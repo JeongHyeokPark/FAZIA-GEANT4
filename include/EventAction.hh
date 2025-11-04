@@ -32,7 +32,7 @@ class EventAction : public G4UserEventAction
     void AccumulateEdepSi2( G4int flag, G4int det, G4double val ) { edepSi2[flag][det] += val; };
     void AccumulateEdepCsI( G4int flag, G4int det, G4double val ) { edepCsI[flag][det] += val; };
 
-    std::map< G4int, G4int > GetTrackFlag() { return fTrackFlag; };
+    std::map< G4int, G4int >* GetTrackFlag() { return fTrackFlag; };
 
   private:
     EventAction & operator=(const EventAction &right);
@@ -44,6 +44,6 @@ class EventAction : public G4UserEventAction
     G4double edepSi2[4][16] = {0};
     G4double edepCsI[4][16] = {0};
 
-    std::map< G4int, G4int > fTrackFlag;
+    std::map< G4int, G4int >* fTrackFlag;
 };
 #endif
